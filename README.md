@@ -6,31 +6,20 @@ This is my first project after completing the [ziglings](https://codeberg.org/zi
 
 # Usage
 ```zig
-const std = @import("microgradz").Value;
+var g = Graph.init(std.heap.page_allocator);
+defer g.deinit();
 
-const a = Value.init(std.heap.page_allocator, 2.0);
-const b = Value.init(std.heap.page_allocator, 3.0);
-const c = a.mul(b);
-const d = c.add(a);
-const z = d.relu();
-defer for ([_]*Value{ a, b, c, d, z }) |v| v.deinit();
+const a = g.value(2.0);
+const b = g.value(3.0);
+const z = a.mul(b).add(a).relu();
 
-// or
+z.backward();
+const d = z.prev[0].?;
+const c = d.prev[0].?;
 
-const a = Value.init(std.heap.page_allocator, 2.0);
-const b = Value.init(std.heap.page_allocator, 3.0);
-const z = (a.mul(b).add(a)).relu();
-defer for ([_]*Value{ a, b, z }) |v| v.deinit(); // frees leafs and nodes
-
-// yes we exist
-const d_ptr = z.prev[0];
-const c_ptr = d_ptr.?.*.prev[0];
-
-a.data == 2.0;
-b.data == 3.0;
-c_ptr.?.data == 6.0;
-d_ptr.?.data == 8.0;
-z.data == 8.0;
-
-_ = z.backward();
+1.0 == z.grad
+1.0 == d.grad
+1.0 == c.grad
+2.0 == b.grad
+4.0 == a.grad
 ```

@@ -1,18 +1,15 @@
 const std = @import("std");
-const Value = @import("value.zig").Value;
+const Graph = @import("value.zig").Graph;
 
 pub fn main() !void {
     std.debug.print("Run `zig build test --summary all` to execute unit tests.\n", .{});
     const allocator = std.heap.page_allocator;
+    const g = Graph.init(allocator);
+    defer g.deinit();
 
-    const a = Value.init(allocator, 1.0);
-    defer a.deinit();
-
-    const b = Value.init(allocator, 2.0);
-    defer b.deinit();
-
+    const a = g.value(1.0);
+    const b = g.value(2.0);
     const c = a.mul(b);
-    defer c.deinit();
 
     c.backward();
 }
