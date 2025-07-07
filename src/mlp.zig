@@ -1,6 +1,6 @@
 const std = @import("std");
-const Value = @import("value.zig").Value;
-const Graph = @import("value.zig").Graph;
+const Value = @import("graph.zig").Value;
+const Graph = @import("graph.zig").Graph;
 const Layer = @import("neuron.zig").Layer;
 const test_utils = @import("test-utils.zig");
 

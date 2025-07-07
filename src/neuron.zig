@@ -1,5 +1,5 @@
 const std = @import("std");
-const value_mod = @import("value.zig");
+const value_mod = @import("graph.zig");
 const Value = value_mod.Value;
 const Graph = value_mod.Graph;
 

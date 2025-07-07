@@ -1,5 +1,5 @@
 const std = @import("std");
-const Value = @import("value.zig").Value;
+const Value = @import("graph.zig").Value;
 
 pub fn generate_test_weights(allocator: std.mem.Allocator, params: []*Value, filepath: []const u8) !void {
     var data = try allocator.alloc(f64, params.len);

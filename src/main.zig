@@ -1,5 +1,5 @@
 const std = @import("std");
-const Graph = @import("value.zig").Graph;
+const Graph = @import("graph.zig").Graph;
 
 pub fn main() !void {
     std.debug.print("Run `zig build test --summary all` to execute unit tests.\n", .{});
