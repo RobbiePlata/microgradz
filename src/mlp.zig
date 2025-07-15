@@ -3,19 +3,33 @@ const Value = @import("graph.zig").Value;
 const Graph = @import("graph.zig").Graph;
 const Layer = @import("neuron.zig").Layer;
 const test_utils = @import("test-utils.zig");
+const NonLinear = @import("neuron.zig").NonLinear;
+
+pub const LayerSpec = struct {
+    sizes: []usize,
+    non_linear: []NonLinear,
+};
 
 pub const MLP = struct {
     layers: []*Layer,
     graph: *Graph,
 
-    pub fn init(graph: *Graph, layer_sizes: []const usize, seed: ?u64) !*MLP {
+    pub fn init(
+        graph: *Graph,
+        layer_specs: LayerSpec,
+        seed: ?u64,
+    ) !*MLP {
+        const layer_sizes = layer_specs.sizes;
+        const nonlinears = layer_specs.non_linear;
+
         if (layer_sizes.len < 2) return error.InvalidLayerSizes;
+        if (nonlinears.len != layer_sizes.len - 1) return error.InvalidNonlinearsLength;
 
         const allocator = graph.allocator();
         const mlp = try allocator.create(MLP);
         const layers = try allocator.alloc(*Layer, layer_sizes.len - 1);
         for (0..layer_sizes.len - 1) |i| {
-            layers[i] = try Layer.init(graph, layer_sizes[i], layer_sizes[i + 1], seed);
+            layers[i] = try Layer.init(graph, layer_sizes[i], layer_sizes[i + 1], seed, nonlinears[i]);
         }
 
         mlp.* = .{

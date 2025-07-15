@@ -3,12 +3,18 @@ const value_mod = @import("graph.zig");
 const Value = value_mod.Value;
 const Graph = value_mod.Graph;
 
+pub const NonLinear = enum {
+    relu,
+    none,
+};
+
 pub const Neuron = struct {
     weights: []*Value,
     bias: *Value,
     graph: *Graph,
+    nonlinear: NonLinear,
 
-    pub fn init(g: *Graph, n_inputs: usize, seed: ?u64) !*Neuron {
+    pub fn init(g: *Graph, n_inputs: usize, seed: ?u64, nonlinear: NonLinear) !*Neuron {
         const allocator = g.allocator();
         const neuron = try allocator.create(Neuron);
         var weights = try allocator.alloc(*Value, n_inputs);
@@ -26,6 +32,7 @@ pub const Neuron = struct {
             .weights = weights,
             .bias = b,
             .graph = g,
+            .nonlinear = nonlinear,
         };
         return neuron;
     }
@@ -38,7 +45,11 @@ pub const Neuron = struct {
             const wx = inputs[i].mul(self.weights[i]);
             sum = sum.add(wx);
         }
-        return sum.relu();
+
+        switch (self.nonlinear) {
+            .relu => return sum.relu(),
+            .none => return sum,
+        }
     }
 
     pub fn parameters(self: *Neuron) []*Value {
@@ -54,12 +65,12 @@ pub const Layer = struct {
     neurons: []*Neuron,
     graph: *Graph,
 
-    pub fn init(g: *Graph, n_inputs: usize, n_outputs: usize, seed: ?u64) !*Layer {
+    pub fn init(g: *Graph, n_inputs: usize, n_outputs: usize, seed: ?u64, nonlinear: NonLinear) !*Layer {
         const allocator = g.allocator();
         const layer = try allocator.create(Layer);
         const neurons = try allocator.alloc(*Neuron, n_outputs);
         for (0..n_outputs) |i| {
-            neurons[i] = try Neuron.init(g, n_inputs, seed);
+            neurons[i] = try Neuron.init(g, n_inputs, seed, nonlinear);
         }
         layer.* = .{
             .neurons = neurons,
