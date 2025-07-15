@@ -33,9 +33,9 @@ pub const Neuron = struct {
     pub fn forward(self: *Neuron, inputs: []*Value) !*Value {
         if (inputs.len != self.weights.len) return error.InvalidInputSize;
 
-        var sum = self.bias;
+        var sum: *Value = self.bias;
         for (0..inputs.len) |i| {
-            const wx = self.weights[i].mul(inputs[i]);
+            const wx = inputs[i].mul(self.weights[i]);
             sum = sum.add(wx);
         }
         return sum.relu();
