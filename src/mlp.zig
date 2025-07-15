@@ -6,8 +6,8 @@ const test_utils = @import("test-utils.zig");
 const NonLinear = @import("neuron.zig").NonLinear;
 
 pub const LayerSpec = struct {
-    sizes: []usize,
-    non_linear: []NonLinear,
+    sizes: []const usize,
+    non_linear: []const NonLinear,
 };
 
 pub const MLP = struct {
