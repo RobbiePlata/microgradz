@@ -5,6 +5,8 @@ const Layer = @import("neuron.zig").Layer;
 const test_utils = @import("test-utils.zig");
 const NonLinear = @import("neuron.zig").NonLinear;
 
+const LoadError = error{InvalidWeightsLength};
+
 pub const LayerSpec = struct {
     sizes: []const usize,
     non_linear: []const NonLinear,
@@ -55,6 +57,51 @@ pub const MLP = struct {
             for (ps) |p| list.append(p) catch {};
         }
         return list.toOwnedSlice() catch &[_]*Value{};
+    }
+
+    pub fn save(self: *MLP, path: []const u8) !void {
+        const file = try std.fs.cwd().createFile(path, .{ .truncate = true });
+        defer file.close();
+
+        var writer = file.writer();
+        const ps = self.parameters();
+        for (ps) |param| {
+            try writer.print("{d}\n", .{param.data});
+        }
+    }
+
+    pub fn load(
+        self: *MLP,
+        allocator: std.mem.Allocator,
+        path: []const u8,
+    ) !void {
+        const cwd = std.fs.cwd();
+        var file = try cwd.openFile(path, .{ .mode = std.fs.File.OpenMode.read_only });
+        defer file.close();
+
+        var reader = file.reader();
+        const params = self.parameters();
+        const paramCount = params.len;
+
+        var idx: usize = 0;
+        while (true) {
+            const maybe_line = try reader.readUntilDelimiterOrEofAlloc(allocator, '\n', 1024 * 1024);
+            if (maybe_line) |line| {
+                defer allocator.free(line);
+                if (line.len == 0) continue;
+                if (idx >= paramCount) {
+                    return LoadError.InvalidWeightsLength;
+                }
+                params[idx].data = try std.fmt.parseFloat(f64, line);
+                idx += 1;
+            } else {
+                break;
+            }
+        }
+
+        if (idx != paramCount) {
+            return LoadError.InvalidWeightsLength;
+        }
     }
 };
 
