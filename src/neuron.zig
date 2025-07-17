@@ -65,7 +65,7 @@ pub const Layer = struct {
     neurons: []*Neuron,
     graph: *Graph,
 
-    pub fn init(g: *Graph, n_inputs: usize, n_outputs: usize, seed: ?u64, nonlinear: NonLinear) !*Layer {
+    pub fn init(g: *Graph, n_inputs: usize, n_outputs: usize, nonlinear: NonLinear, seed: ?u64) !*Layer {
         const allocator = g.allocator();
         const layer = try allocator.create(Layer);
         const neurons = try allocator.alloc(*Neuron, n_outputs);

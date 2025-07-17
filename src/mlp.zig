@@ -8,8 +8,8 @@ const NonLinear = @import("neuron.zig").NonLinear;
 const LoadError = error{InvalidWeightsLength};
 
 pub const LayerSpec = struct {
-    sizes: []const usize,
-    non_linear: []const NonLinear,
+    shape: []const usize,
+    nonlin: []const NonLinear,
 };
 
 pub const MLP = struct {
@@ -21,19 +21,21 @@ pub const MLP = struct {
         layer_specs: LayerSpec,
         seed: ?u64,
     ) !*MLP {
-        const layer_sizes = layer_specs.sizes;
-        const nonlinears = layer_specs.non_linear;
-
-        if (layer_sizes.len < 2) return error.InvalidLayerSizes;
-        if (nonlinears.len != layer_sizes.len - 1) return error.InvalidNonlinearsLength;
+        if (layer_specs.shape.len < 2) return error.InvalidLayerShape;
+        if (layer_specs.nonlin.len != layer_specs.shape.len - 1) return error.InvalidNonlinearsLength;
 
         const allocator = graph.allocator();
         const mlp = try allocator.create(MLP);
-        const layers = try allocator.alloc(*Layer, layer_sizes.len - 1);
-        for (0..layer_sizes.len - 1) |i| {
-            layers[i] = try Layer.init(graph, layer_sizes[i], layer_sizes[i + 1], seed, nonlinears[i]);
+        const layers = try allocator.alloc(*Layer, layer_specs.shape.len - 1);
+        for (0..layer_specs.shape.len - 1) |i| {
+            layers[i] = try Layer.init(
+                graph,
+                layer_specs.shape[i],
+                layer_specs.shape[i + 1],
+                layer_specs.nonlin[i],
+                seed,
+            );
         }
-
         mlp.* = .{
             .layers = layers,
             .graph = graph,
