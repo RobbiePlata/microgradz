@@ -14,13 +14,15 @@ pub const Neuron = struct {
     graph: *Graph,
     nonlinear: NonLinear,
 
-    pub fn init(g: *Graph, n_inputs: usize, seed: ?u64, nonlinear: NonLinear) !*Neuron {
+    pub fn init(
+        g: *Graph,
+        n_inputs: usize,
+        nonlinear: NonLinear,
+        rand: *std.Random,
+    ) !*Neuron {
         const allocator = g.allocator();
         const neuron = try allocator.create(Neuron);
         var weights = try allocator.alloc(*Value, n_inputs);
-
-        var prng = if (seed) |s| std.Random.DefaultPrng.init(s) else std.Random.DefaultPrng.init(@intCast(std.time.milliTimestamp()));
-        const rand = prng.random();
 
         for (0..n_inputs) |i| {
             weights[i] = g.value(rand.float(f64) * 2 - 1);
@@ -69,8 +71,12 @@ pub const Layer = struct {
         const allocator = g.allocator();
         const layer = try allocator.create(Layer);
         const neurons = try allocator.alloc(*Neuron, n_outputs);
+
+        var prng = if (seed) |s| std.Random.DefaultPrng.init(s) else std.Random.DefaultPrng.init(@intCast(std.time.milliTimestamp()));
+        var rand = prng.random();
+
         for (0..n_outputs) |i| {
-            neurons[i] = try Neuron.init(g, n_inputs, seed, nonlinear);
+            neurons[i] = try Neuron.init(g, n_inputs, nonlinear, &rand);
         }
         layer.* = .{
             .neurons = neurons,
