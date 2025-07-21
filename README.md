@@ -2,7 +2,7 @@
 
 Implementation of [Micrograd](https://github.com/karpathy/micrograd) by Andrej Karpathy utilizing [Ziglang](https://ziglang.org/). Micrograd is a simpler scalar-value based autograd engine which creates a topological graph of operations and compute gradients using backpropagation.
 
-This is my first project after completing the [ziglings](https://codeberg.org/ziglings/exercises/#ziglings)".
+This is my first project after completing the [ziglings](https://codeberg.org/ziglings/exercises/#ziglings).
 
 # Usage
 ```zig
@@ -37,8 +37,9 @@ zig build run
 Ensure the following directory structure relative to your project root
 ```
 microgradz.exe
-mnist_weights.txt
-makemoons_weights.txt
+weights/
+  ├── mnist_weights.txt
+  └── makemoons_weights.txt
 data/
   ├── mnist/
   │   ├── train-images-idx3-ubyte 
