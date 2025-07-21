@@ -107,13 +107,49 @@ pub const MLP = struct {
     }
 };
 
+pub fn softmax(graph: *Graph, logits: []*Value) ![]*Value {
+    if (logits.len == 0) @panic("Softmax requires at least one logit");
+
+    const alloc = graph.allocator();
+    var max_logit: *Value = logits[0];
+    for (logits[1..]) |logit| {
+        if (logit.data > max_logit.data) {
+            max_logit = logit;
+        }
+    }
+
+    var shifted_exps = try alloc.alloc(*Value, logits.len);
+    var sum_exp: *Value = graph.value(0.0);
+
+    for (logits, 0..) |logit, i| {
+        const shifted = logit.sub(max_logit);
+
+        const e = shifted.exp();
+        shifted_exps[i] = e;
+        sum_exp = sum_exp.add(e);
+    }
+
+    var probs = try alloc.alloc(*Value, logits.len);
+    for (shifted_exps, 0..) |e, i| {
+        probs[i] = try e.div(sum_exp);
+    }
+
+    return probs;
+}
+
 test "MLP with arena graph" {
     std.debug.print("Testing MLP with arena..\n", .{});
     var g = Graph.init(std.heap.page_allocator);
     defer g.deinit();
 
     const layer_sizes = [_]usize{ 3, 4, 4, 1 };
-    const mlp = try MLP.init(&g, &layer_sizes, 1337);
+    const nonlinears = [_]NonLinear{ NonLinear.none, NonLinear.none, NonLinear.none };
+
+    const layer_spec = LayerSpec{
+        .shape = layer_sizes[0..],
+        .nonlin = nonlinears[0..],
+    };
+    const mlp = try MLP.init(&g, layer_spec, 1337);
 
     const inputs = try std.heap.page_allocator.alloc(*Value, layer_sizes[0]);
     inputs[0] = g.value(2.0);
