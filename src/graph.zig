@@ -1,6 +1,6 @@
 const std = @import("std");
 
-pub const Op = enum { None, Add, Sub, Mul, Div, Relu };
+pub const Op = enum { None, Add, Sub, Mul, Div, Relu, Log, Exp };
 
 fn op_repr(op: Op) []const u8 {
     return switch (op) {
@@ -9,6 +9,8 @@ fn op_repr(op: Op) []const u8 {
         .Mul => "*",
         .Div => "/",
         .Relu => "relu",
+        .Log => "log",
+        .Exp => "exp",
         .None => "noop",
     };
 }
@@ -61,12 +63,33 @@ pub const Value = struct {
         return self.spawn(self.data + other.data, .Add, .{ self, other });
     }
 
+    pub fn sub(self: *Value, other: *Value) *Value {
+        return self.spawn(self.data - other.data, .Sub, .{ self, other });
+    }
+
     pub fn mul(self: *Value, other: *Value) *Value {
         return self.spawn(self.data * other.data, .Mul, .{ self, other });
     }
 
+    pub fn div(self: *Value, other: *Value) !*Value {
+        if (other.data == 0.0) {
+            return error.DivisionByZero;
+        }
+        return self.spawn(self.data / other.data, .Div, .{ self, other });
+    }
+
     pub fn relu(self: *Value) *Value {
         return self.spawn(@max(self.data, 0.0), .Relu, .{ self, null });
+    }
+
+    pub fn log(self: *Value) !*Value {
+        const epsilon: f64 = 1e-10;
+        const clipped: f64 = if (self.data <= epsilon) epsilon else self.data;
+        return self.spawn(std.math.log(f64, std.math.e, clipped), .Log, .{ self, null });
+    }
+
+    pub fn exp(self: *Value) *Value {
+        return self.spawn(std.math.exp(self.data), .Exp, .{ self, null });
     }
 
     pub fn zero_grad(self: *Value) void {
@@ -78,14 +101,39 @@ pub const Value = struct {
         list: *std.ArrayList(*Value),
         seen: *std.AutoHashMap(usize, void),
     ) void {
-        const key = @intFromPtr(node);
-        if (seen.contains(key)) return;
-        seen.put(key, {}) catch @panic("OOM");
+        const Item = struct { node: *Value, is_visited: bool };
+        var stack = std.ArrayList(Item).init(seen.allocator);
+        defer stack.deinit();
 
-        if (node.prev[0]) |p0| dfs_topo(p0, list, seen);
-        if (node.prev[1]) |p1| dfs_topo(p1, list, seen);
+        stack.append(.{ .node = node, .is_visited = false }) catch @panic("OOM");
 
-        list.append(node) catch @panic("OOM");
+        while (stack.items.len > 0) {
+            const idx = stack.items.len - 1;
+            var item_ptr = &stack.items[idx];
+
+            if (item_ptr.is_visited) {
+                _ = stack.pop();
+                list.append(item_ptr.node) catch @panic("OOM");
+                continue;
+            }
+            item_ptr.is_visited = true;
+
+            const current_node = item_ptr.node;
+            const key = @intFromPtr(current_node);
+
+            if (seen.contains(key)) {
+                _ = stack.pop();
+                continue;
+            }
+            seen.put(key, {}) catch @panic("OOM");
+
+            if (current_node.prev[1]) |p1| {
+                stack.append(.{ .node = p1, .is_visited = false }) catch @panic("OOM");
+            }
+            if (current_node.prev[0]) |p0| {
+                stack.append(.{ .node = p0, .is_visited = false }) catch @panic("OOM");
+            }
+        }
     }
 
     pub fn backward(self: *Value) void {
@@ -131,6 +179,14 @@ pub const Value = struct {
                 .Relu => {
                     const p0 = n.prev[0].?;
                     if (n.data > 0.0) p0.grad += n.grad;
+                },
+                .Log => {
+                    const p0 = n.prev[0].?;
+                    p0.grad += n.grad / p0.data;
+                },
+                .Exp => {
+                    const p0 = n.prev[0].?;
+                    p0.grad += n.grad * n.data;
                 },
                 .None => {},
             }
