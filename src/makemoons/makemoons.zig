@@ -4,15 +4,13 @@ const MLP = @import("microgradz").MLP;
 const Value = @import("microgradz").Value;
 const LayerSpec = @import("microgradz").LayerSpec;
 const NonLinear = @import("microgradz").NonLinear;
-const csv = @import("../loaders.zig").csv;
+const csv = @import("../loaders.zig").parseCsv;
 
 const MakeMoonsRow = struct {
     X: f64,
     Y: f64,
     label: i8,
 };
-
-const MakeMoons = csv(@embedFile("make_moons.csv"), MakeMoonsRow);
 
 const Options = struct {
     load_checkpoint: ?[]const u8 = null,
@@ -34,7 +32,13 @@ pub fn make_moons(
     const train = options.train;
 
     const allocator = std.heap.page_allocator;
-    const makemoons = try MakeMoons.load(allocator);
+
+    const file_path = "data/makemoons/make_moons.csv";
+    const max_file_size = 1024 * 1024;
+    const data = try std.fs.cwd().readFileAlloc(allocator, file_path, max_file_size);
+    defer allocator.free(data);
+
+    const makemoons = try csv(allocator, data, MakeMoonsRow);
     defer allocator.free(makemoons);
 
     var input_graph = Graph.init(allocator);

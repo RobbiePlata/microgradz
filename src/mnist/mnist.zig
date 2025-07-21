@@ -14,14 +14,9 @@ const MnistData = struct {
     data: []u8,
 
     // this has to be relative to the exe
-    fn load_images(allocator: std.mem.Allocator, relative_path: []const u8) !MnistData {
-        var buffer: [std.fs.max_path_bytes]u8 = undefined;
-        const exe_dir = try std.fs.selfExeDirPath(&buffer);
-
-        const full_path = try std.fs.path.join(allocator, &[_][]const u8{ exe_dir, relative_path });
-        defer allocator.free(full_path);
-
-        var file = try std.fs.openFileAbsolute(full_path, .{});
+    fn load_images(allocator: std.mem.Allocator, path: []const u8) !MnistData {
+        const cwd = std.fs.cwd();
+        var file = try cwd.openFile(path, .{ .mode = std.fs.File.OpenMode.read_only });
         defer file.close();
 
         var reader = file.reader();
@@ -49,14 +44,9 @@ const MnistData = struct {
         };
     }
 
-    fn load_labels(allocator: std.mem.Allocator, relative_path: []const u8) ![]u8 {
-        var buffer: [std.fs.max_path_bytes]u8 = undefined;
-        const exe_dir = try std.fs.selfExeDirPath(&buffer);
-
-        const full_path = try std.fs.path.join(allocator, &[_][]const u8{ exe_dir, relative_path });
-        defer allocator.free(full_path);
-
-        var file = try std.fs.openFileAbsolute(full_path, .{});
+    fn load_labels(allocator: std.mem.Allocator, path: []const u8) ![]u8 {
+        const cwd = std.fs.cwd();
+        var file = try cwd.openFile(path, .{ .mode = std.fs.File.OpenMode.read_only });
         defer file.close();
 
         var reader = file.reader();
@@ -92,8 +82,8 @@ pub fn mnist(options: Options) !void {
     const train = options.train;
 
     const allocator = std.heap.page_allocator;
-    const flat_images = try MnistData.load_images(allocator, "data/train-images-idx3-ubyte/train-images-idx3-ubyte");
-    const labels = try MnistData.load_labels(allocator, "data/train-labels-idx1-ubyte/train-labels-idx1-ubyte");
+    const flat_images = try MnistData.load_images(allocator, "data/mnist/train-images-idx3-ubyte/train-images-idx3-ubyte");
+    const labels = try MnistData.load_labels(allocator, "data/mnist/train-labels-idx1-ubyte/train-labels-idx1-ubyte");
     defer allocator.free(flat_images.data);
     defer allocator.free(labels);
 
